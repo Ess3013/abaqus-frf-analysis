@@ -1,0 +1,22 @@
+# Abaqus output and temporary files
+*.odb
+*.msg
+*.dat
+*.sta
+*.com
+*.prt
+*.env
+*.ipm
+*.lck
+*.res
+*.abq
+*.pac
+*.sel
+*.sim
+*.jnl
+*.rpy
+*.rec
+
+# Python temp files
+__pycache__/
+*.pyc
