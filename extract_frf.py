@@ -39,7 +39,7 @@ def extract_frf(odb_path, csv_path):
 
     # Write to CSV
     if frequency_data:
-        with open(csv_path, 'wb') as f:
+        with open(csv_path, 'w') as f:
             writer = csv.writer(f)
             writer.writerow(['Frequency (Hz)', 'Strain Energy (J)'])
             for freq, se in zip(frequency_data, strain_energy_data):

@@ -1,14 +1,13 @@
 # Slenderness Ratio Parameter Sweep Results
 
-| Slenderness Ratio (w/L) | Width (w) [m] | Radius (r) [m] | Eigenvalue (λ) | Critical Load [N] |
-|-------------------------|---------------|----------------|----------------|-------------------|
-| 0.050 (1/20.0) | 0.000250 | 0.000125 | 0.0018 | 93.6 |
-| 0.075 (1/13.3) | 0.000375 | 0.000188 | 0.0093 | 475.1 |
-| 0.100 (1/10.0) | 0.000500 | 0.000250 | 0.0287 | 1469.1 |
-| 0.125 (1/8.0) | 0.000625 | 0.000313 | 0.0695 | 3558.0 |
-| 0.150 (1/6.7) | 0.000750 | 0.000375 | 0.1408 | 7207.4 |
-| 0.175 (1/5.7) | 0.000875 | 0.000438 | 0.2568 | 13149.2 |
-| 0.200 (1/5.0) | 0.001000 | 0.000500 | 0.4266 | 21843.5 |
+Includes both Buckling and FRF (Steady State Dynamics) analyses.
 
-
-*Applied load per node: 3200 N, Number of nodes: 16, Total load: 51200 N*
+| Slenderness Ratio (w/L) | Width (w) [m] | Radius (r) [m] | Buckling Eigenvalue (λ) | FRF Data |
+|-------------------------|---------------|----------------|-------------------------|----------|
+| 0.050 | 0.000250 | 0.000125 | 1.8287e-03 | [CSV](Sweep_Files/Job_F_S_0_FRF.csv) |
+| 0.075 | 0.000375 | 0.000188 | 9.2798e-03 | [CSV](Sweep_Files/Job_F_S_1_FRF.csv) |
+| 0.100 | 0.000500 | 0.000250 | 2.8694e-02 | [CSV](Sweep_Files/Job_F_S_2_FRF.csv) |
+| 0.125 | 0.000625 | 0.000313 | 6.9492e-02 | [CSV](Sweep_Files/Job_F_S_3_FRF.csv) |
+| 0.150 | 0.000750 | 0.000375 | 1.4077e-01 | [CSV](Sweep_Files/Job_F_S_4_FRF.csv) |
+| 0.175 | 0.000875 | 0.000438 | 2.5682e-01 | [CSV](Sweep_Files/Job_F_S_5_FRF.csv) |
+| 0.200 | 0.001000 | 0.000500 | 4.2663e-01 | [CSV](Sweep_Files/Job_F_S_6_FRF.csv) |

@@ -42,20 +42,26 @@ def parse_eigenvalue(dat_file):
         print(f"Error parsing dat file: {e}")
     return eigenvalue
 
-def extract_frf_data(odb_path, csv_path):
-    print(f"Extracting FRF data from {odb_path}")
+def extract_frf_data(root_dir, odb_rel_path, csv_rel_path):
+    # odb_rel_path and csv_rel_path are relative to Sweep_Files
+    # we are currently IN Sweep_Files
+    print(f"Extracting FRF data from {odb_rel_path}")
     try:
-        # Get absolute path to extraction script (assuming it is in the project root)
-        script_path = os.path.abspath('extract_frf.py')
-        # Wrap paths in quotes to handle spaces
-        cmd = f'abaqus python "{script_path}" "{os.path.abspath(odb_path)}" "{os.path.abspath(csv_path)}"'
+        # Script is in root
+        script_path = os.path.join(root_dir, 'extract_frf.py')
+        odb_path = os.path.abspath(odb_rel_path)
+        csv_path = os.path.abspath(csv_rel_path)
+        
+        cmd = f'abaqus python "{script_path}" "{odb_path}" "{csv_path}"'
         subprocess.run(cmd, shell=True, check=True)
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Error extracting FRF from {odb_path}: {e}")
+        print(f"Error extracting FRF from {odb_rel_path}: {e}")
         return False
 
 def main():
+    root_dir = os.getcwd()
+    
     if not os.path.exists(input_buckling_base) or not os.path.exists(input_frf_base):
         print("Required base input files not found.")
         return
@@ -82,11 +88,14 @@ def main():
         new_b_content = re.sub(pattern, r"\g<1>" + f"{r:.6f}", buckling_content)
         with open(inp_b, 'w') as f: f.write(new_b_content)
         
-        original_cwd = os.getcwd()
         os.chdir(sweep_dir)
-        success_b = run_abaqus_job(job_b, f"{job_b}.inp")
+        # Check if already done to save time if re-running
+        if not os.path.exists(f"{job_b}.dat"):
+            success_b = run_abaqus_job(job_b, f"{job_b}.inp")
+        else:
+            success_b = True
         eigenvalue = parse_eigenvalue(f"{job_b}.dat") if success_b else None
-        os.chdir(original_cwd)
+        os.chdir(root_dir)
         
         # 2. FRF Analysis
         job_f = f"Job_F_S_{i}"
@@ -96,17 +105,21 @@ def main():
         with open(inp_f, 'w') as f: f.write(new_f_content)
         
         os.chdir(sweep_dir)
-        success_f = run_abaqus_job(job_f, f"{job_f}.inp")
+        if not os.path.exists(f"{job_f}.odb"):
+            success_f = run_abaqus_job(job_f, f"{job_f}.inp")
+        else:
+            success_f = True
+            
+        csv_path = f"{job_f}_FRF.csv"
         if success_f:
-            csv_path = f"{job_f}_FRF.csv"
-            extract_frf_data(f"{job_f}.odb", csv_path)
-        os.chdir(original_cwd)
+            extract_frf_data(root_dir, f"{job_f}.odb", csv_path)
+        os.chdir(root_dir)
         
         if success_b or success_f:
             results.append({
                 'S': S, 'w': w, 'r': r, 
                 'eigenvalue': eigenvalue,
-                'frf_csv': f"{job_f}_FRF.csv" if success_f else None
+                'frf_csv': csv_path if os.path.exists(os.path.join(sweep_dir, csv_path)) else None
             })
             print(f"S={S:.3f} -> Buckling λ={eigenvalue}, FRF complete.")
 
