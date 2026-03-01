@@ -59,6 +59,20 @@ def extract_frf_data(root_dir, odb_rel_path, csv_rel_path):
         print(f"Error extracting FRF from {odb_rel_path}: {e}")
         return False
 
+def plot_frf_data(root_dir, csv_rel_path, png_rel_path):
+    print(f"Plotting FRF data from {csv_rel_path}")
+    try:
+        script_path = os.path.join(root_dir, 'plot_frf_sweep.py')
+        csv_path = os.path.abspath(csv_rel_path)
+        png_path = os.path.abspath(png_rel_path)
+        
+        cmd = f'python "{script_path}" "{csv_path}" "{png_path}"'
+        subprocess.run(cmd, shell=True, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error plotting FRF from {csv_rel_path}: {e}")
+        return False
+
 def main():
     root_dir = os.getcwd()
     
@@ -111,15 +125,18 @@ def main():
             success_f = True
             
         csv_path = f"{job_f}_FRF.csv"
+        png_path = f"{job_f}_Plot.png"
         if success_f:
-            extract_frf_data(root_dir, f"{job_f}.odb", csv_path)
+            if extract_frf_data(root_dir, f"{job_f}.odb", csv_path):
+                plot_frf_data(root_dir, csv_path, png_path)
         os.chdir(root_dir)
         
         if success_b or success_f:
             results.append({
                 'S': S, 'w': w, 'r': r, 
                 'eigenvalue': eigenvalue,
-                'frf_csv': csv_path if os.path.exists(os.path.join(sweep_dir, csv_path)) else None
+                'frf_csv': csv_path if os.path.exists(os.path.join(sweep_dir, csv_path)) else None,
+                'frf_plot': png_path if os.path.exists(os.path.join(sweep_dir, png_path)) else None
             })
             print(f"S={S:.3f} -> Buckling λ={eigenvalue}, FRF complete.")
 
@@ -127,13 +144,14 @@ def main():
     with open(results_file, 'w', encoding='utf-8') as f:
         f.write("# Slenderness Ratio Parameter Sweep Results\n\n")
         f.write("Includes both Buckling and FRF (Steady State Dynamics) analyses.\n\n")
-        f.write("| Slenderness Ratio (w/L) | Width (w) [m] | Radius (r) [m] | Buckling Eigenvalue (λ) | FRF Data |\n")
-        f.write("|-------------------------|---------------|----------------|-------------------------|----------|\n")
+        f.write("| Slenderness Ratio (w/L) | Width (w) [m] | Radius (r) [m] | Buckling Eigenvalue (λ) | FRF Data | FRF Plot |\n")
+        f.write("|-------------------------|---------------|----------------|-------------------------|----------|----------|\n")
         for res in results:
-            S, w, r, eig, frf = res['S'], res['w'], res['r'], res['eigenvalue'], res['frf_csv']
+            S, w, r, eig, frf, plot = res['S'], res['w'], res['r'], res['eigenvalue'], res['frf_csv'], res['frf_plot']
             eig_str = f"{eig:.4e}" if eig else "N/A"
             frf_str = f"[CSV]({sweep_dir}/{frf})" if frf else "N/A"
-            f.write(f"| {S:.3f} | {w:.6f} | {r:.6f} | {eig_str} | {frf_str} |\n")
+            plot_str = f"[PNG]({sweep_dir}/{plot})" if plot else "N/A"
+            f.write(f"| {S:.3f} | {w:.6f} | {r:.6f} | {eig_str} | {frf_str} | {plot_str} |\n")
         
     print(f"Sweep complete. Results written to {results_file}")
 
