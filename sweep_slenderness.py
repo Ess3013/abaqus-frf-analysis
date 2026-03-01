@@ -6,15 +6,15 @@ import numpy as np
 # Parameters
 L_link = 0.005  # Nominal link length in meters (5mm)
 slenderness_ratios = np.linspace(0.05, 0.2, 7)  # from 1/20 to 1/5
-input_file_base = 'Buckling/Job-1.inp'
+
+# Input files
+input_buckling_base = 'Buckling/Job-1.inp'
+input_frf_base = 'Job-1.inp'
 results_file = 'Slenderness_Sweep_Results.md'
 
 def run_abaqus_job(job_name, input_file):
     print(f"Running Abaqus job: {job_name}")
     try:
-        # Run Abaqus analysis
-        # Using interactive to wait for completion
-        # On Windows, sometimes the .bat is needed or just abaqus
         cmd = f"abaqus job={job_name} input={input_file} interactive ask_delete=OFF"
         subprocess.run(cmd, shell=True, check=True)
         return True
@@ -33,9 +33,7 @@ def parse_eigenvalue(dat_file):
             lines = f.readlines()
             for i, line in enumerate(lines):
                 if "MODE NO      EIGENVALUE" in line:
-                    # Look for the first mode (usually 3 lines down)
                     for j in range(i+1, min(i+10, len(lines))):
-                        # Match numbers like 1.234E-02 or 5.678
                         match = re.search(r'\s+1\s+([\d.E+-]+)', lines[j])
                         if match:
                             eigenvalue = float(match.group(1))
@@ -44,70 +42,86 @@ def parse_eigenvalue(dat_file):
         print(f"Error parsing dat file: {e}")
     return eigenvalue
 
+def extract_frf_data(odb_path, csv_path):
+    print(f"Extracting FRF data from {odb_path}")
+    try:
+        # Get absolute path to extraction script (assuming it is in the project root)
+        script_path = os.path.abspath('extract_frf.py')
+        # Wrap paths in quotes to handle spaces
+        cmd = f'abaqus python "{script_path}" "{os.path.abspath(odb_path)}" "{os.path.abspath(csv_path)}"'
+        subprocess.run(cmd, shell=True, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error extracting FRF from {odb_path}: {e}")
+        return False
+
 def main():
-    if not os.path.exists(input_file_base):
-        print(f"Base input file {input_file_base} not found.")
+    if not os.path.exists(input_buckling_base) or not os.path.exists(input_frf_base):
+        print("Required base input files not found.")
         return
 
-    with open(input_file_base, 'r') as f:
-        base_content = f.read()
+    with open(input_buckling_base, 'r') as f:
+        buckling_content = f.read()
+    with open(input_frf_base, 'r') as f:
+        frf_content = f.read()
 
     results = []
-    
-    # Create a directory for sweep files to avoid cluttering
     sweep_dir = 'Sweep_Files'
     if not os.path.exists(sweep_dir):
         os.makedirs(sweep_dir)
-
-    # Base path for Abaqus (current working dir)
-    cwd = os.getcwd()
 
     for i, S in enumerate(slenderness_ratios):
         w = S * L_link
         r = w / 2.0
         
-        job_name = f"Job_S_{i}"
-        temp_input_name = f"{job_name}.inp"
-        temp_input_path = os.path.join(sweep_dir, temp_input_name)
+        # 1. Buckling Analysis
+        job_b = f"Job_B_S_{i}"
+        inp_b = os.path.join(sweep_dir, f"{job_b}.inp")
         
-        # Replace the radius in the input file
         pattern = r"(\*Beam Section,.*?section=CIRC\s*\r?\n)([\d.e+-]+)"
-        new_content = re.sub(pattern, r"\g<1>" + f"{r:.6f}", base_content)
+        new_b_content = re.sub(pattern, r"\g<1>" + f"{r:.6f}", buckling_content)
+        with open(inp_b, 'w') as f: f.write(new_b_content)
         
-        with open(temp_input_path, 'w') as f:
-            f.write(new_content)
-        
-        # Change directory to run the job
         original_cwd = os.getcwd()
         os.chdir(sweep_dir)
-        
-        success = run_abaqus_job(job_name, temp_input_name)
-        
-        if success:
-            dat_file = f"{job_name}.dat"
-            eigenvalue = parse_eigenvalue(dat_file)
-            if eigenvalue:
-                results.append((S, w, r, eigenvalue))
-                print(f"S={S:.3f}, w={w:.6f}, r={r:.6f} -> Eigenvalue={eigenvalue}")
-            else:
-                print(f"Failed to parse eigenvalue for S={S:.3f}")
-        else:
-            print(f"Failed to run job for S={S:.3f}")
-        
+        success_b = run_abaqus_job(job_b, f"{job_b}.inp")
+        eigenvalue = parse_eigenvalue(f"{job_b}.dat") if success_b else None
         os.chdir(original_cwd)
+        
+        # 2. FRF Analysis
+        job_f = f"Job_F_S_{i}"
+        inp_f = os.path.join(sweep_dir, f"{job_f}.inp")
+        
+        new_f_content = re.sub(pattern, r"\g<1>" + f"{r:.6f}", frf_content)
+        with open(inp_f, 'w') as f: f.write(new_f_content)
+        
+        os.chdir(sweep_dir)
+        success_f = run_abaqus_job(job_f, f"{job_f}.inp")
+        if success_f:
+            csv_path = f"{job_f}_FRF.csv"
+            extract_frf_data(f"{job_f}.odb", csv_path)
+        os.chdir(original_cwd)
+        
+        if success_b or success_f:
+            results.append({
+                'S': S, 'w': w, 'r': r, 
+                'eigenvalue': eigenvalue,
+                'frf_csv': f"{job_f}_FRF.csv" if success_f else None
+            })
+            print(f"S={S:.3f} -> Buckling λ={eigenvalue}, FRF complete.")
 
-    # Write results to Markdown
+    # Write summary
     with open(results_file, 'w', encoding='utf-8') as f:
         f.write("# Slenderness Ratio Parameter Sweep Results\n\n")
-        f.write("| Slenderness Ratio (w/L) | Width (w) [m] | Radius (r) [m] | Eigenvalue (λ) | Critical Load [N] |\n")
-        f.write("|-------------------------|---------------|----------------|----------------|-------------------|\n")
-        for S, w, r, eig in results:
-            # Assuming base load is 16 * 3200 = 51200 N
-            crit_load = eig * 51200
-            f.write(f"| {S:.3f} (1/{1/S:.1f}) | {w:.6f} | {r:.6f} | {eig:.4f} | {crit_load:.1f} |\n")
+        f.write("Includes both Buckling and FRF (Steady State Dynamics) analyses.\n\n")
+        f.write("| Slenderness Ratio (w/L) | Width (w) [m] | Radius (r) [m] | Buckling Eigenvalue (λ) | FRF Data |\n")
+        f.write("|-------------------------|---------------|----------------|-------------------------|----------|\n")
+        for res in results:
+            S, w, r, eig, frf = res['S'], res['w'], res['r'], res['eigenvalue'], res['frf_csv']
+            eig_str = f"{eig:.4e}" if eig else "N/A"
+            frf_str = f"[CSV]({sweep_dir}/{frf})" if frf else "N/A"
+            f.write(f"| {S:.3f} | {w:.6f} | {r:.6f} | {eig_str} | {frf_str} |\n")
         
-        f.write("\n\n*Applied load per node: 3200 N, Number of nodes: 16, Total load: 51200 N*\n")
-
     print(f"Sweep complete. Results written to {results_file}")
 
 if __name__ == "__main__":
