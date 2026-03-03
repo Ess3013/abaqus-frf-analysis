@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Structural Analysis Report - Slenderness Sweep</title>
+    <style>
+        body { font-family: 'Segoe UI', Calibri, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; background-color: #fff; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: center; }
+        th { background-color: #f8f9fa; font-weight: bold; }
+        .figure { text-align: center; margin: 30px 0; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        .figure img { max-width: 100%; height: auto; border: 1px solid #ccc; }
+        .caption { font-size: 0.9em; color: #666; margin-top: 10px; font-style: italic; }
+        .summary-box { background-color: #eef2f7; padding: 15px; border-left: 5px solid #2c3e50; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>Structural Analysis Report: Slenderness Ratio Parameter Sweep</h1>
+    <p><strong>Analysis Tool:</strong> Abaqus Standard (Simulia)<br>
+    <strong>Project:</strong> Buckling and Frequency Response Optimization<br>
+    <strong>Date:</strong> March 3, 2026</p>
+
+    <div class="summary-box">
+        <h2>Executive Summary</h2>
+        <p>This study evaluates the structural performance of a 2D beam assembly under high compressive loads. A parameter sweep was conducted across seven slenderness ratios ($w/L$) ranging from 0.05 to 0.20. The primary objectives were to identify the critical buckling load and characterize the dynamic energy response across a frequency spectrum of 100 Hz to 30,000 Hz.</p>
+    </div>
+
+    <h2>1. Methodology</h2>
+    <h3>1.1 Model Geometry and Material</h3>
+    <p>The base model consists of a 2D planar deformable body modeled with B21 (linear beam) elements. The material properties assigned correspond to standard structural steel:</p>
+    <ul>
+        <li><strong>Young's Modulus (E):</strong> 200 GPa (2e11 Pa)</li>
+        <li><strong>Poisson's Ratio (&nu;):</strong> 0.3</li>
+        <li><strong>Density (&rho;):</strong> 7,850 kg/m&sup3;</li>
+        <li><strong>Beam Length (L):</strong> 0.005 m</li>
+    </ul>
+
+    <h3>1.2 Loading and Boundary Conditions</h3>
+    <p>Supports were modeled using symmetry constraints ($XASYMM$). A total compressive load of <strong>51,200 N</strong> was applied, distributed as 3,200 N concentrated forces across 16 critical nodes. This load represents the nominal pressure for buckling factor estimation.</p>
+
+    <h3>1.3 Analysis Steps</h3>
+    <ol>
+        <li><strong>Buckling (Linear Eigenvalue):</strong> Uses the Lanczos solver to find the factor ($\lambda$) by which the base load must be multiplied to reach the critical buckling state ($P_{crit} = \lambda 	imes P_{applied}$).</li>
+        <li><strong>FRF (Steady-State Dynamics):</strong> Performs a direct harmonic analysis from 100 Hz to 30,000 Hz using 500 increments. The output variable is the Total Strain Energy (ALLSE).</li>
+    </ol>
+
+    <h2>2. Tabulated Results</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Ratio (w/L)</th>
+                <th>Width [mm]</th>
+                <th>Radius [mm]</th>
+                <th>Eigenvalue (&lambda;)</th>
+                <th>Critical Load [N]</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>0.050</td><td>0.250</td><td>0.125</td><td>1.8287e-03</td><td>93.6</td></tr>
+            <tr><td>0.075</td><td>0.375</td><td>0.188</td><td>9.2798e-03</td><td>475.1</td></tr>
+            <tr><td>0.100</td><td>0.500</td><td>0.250</td><td>2.8694e-02</td><td>1,469.1</td></tr>
+            <tr><td>0.125</td><td>0.625</td><td>0.313</td><td>6.9492e-02</td><td>3,558.0</td></tr>
+            <tr><td>0.150</td><td>0.750</td><td>0.375</td><td>1.4077e-01</td><td>7,207.4</td></tr>
+            <tr><td>0.175</td><td>0.875</td><td>0.438</td><td>2.5682e-01</td><td>13,149.2</td></tr>
+            <tr><td>0.200</td><td>1.000</td><td>0.500</td><td>4.2663e-01</td><td>21,843.5</td></tr>
+        </tbody>
+    </table>
+
+    <h2>3. Frequency Response Visualizations</h2>
+    <p>The following figures illustrate the Strain Energy (Joules) response on a log-scale Y-axis. Resonant peaks signify frequencies where the structure experiences maximum deformation energy.</p>
+
+    <div class="figure">
+        <img src="Sweep_Files/Job_F_S_0_Plot.png" alt="FRF Plot Ratio 0.050">
+        <div class="caption">Figure 1: FRF Response for Slenderness Ratio 0.050 ($w/L = 1/20$)</div>
+    </div>
+
+    <div class="figure">
+        <img src="Sweep_Files/Job_F_S_1_Plot.png" alt="FRF Plot Ratio 0.075">
+        <div class="caption">Figure 2: FRF Response for Slenderness Ratio 0.075</div>
+    </div>
+
+    <div class="figure">
+        <img src="Sweep_Files/Job_F_S_2_Plot.png" alt="FRF Plot Ratio 0.100">
+        <div class="caption">Figure 3: FRF Response for Slenderness Ratio 0.100 ($w/L = 1/10$)</div>
+    </div>
+
+    <div class="figure">
+        <img src="Sweep_Files/Job_F_S_3_Plot.png" alt="FRF Plot Ratio 0.125">
+        <div class="caption">Figure 4: FRF Response for Slenderness Ratio 0.125</div>
+    </div>
+
+    <div class="figure">
+        <img src="Sweep_Files/Job_F_S_4_Plot.png" alt="FRF Plot Ratio 0.150">
+        <div class="caption">Figure 5: FRF Response for Slenderness Ratio 0.150</div>
+    </div>
+
+    <div class="figure">
+        <img src="Sweep_Files/Job_F_S_5_Plot.png" alt="FRF Plot Ratio 0.175">
+        <div class="caption">Figure 6: FRF Response for Slenderness Ratio 0.175</div>
+    </div>
+
+    <div class="figure">
+        <img src="Sweep_Files/Job_F_S_6_Plot.png" alt="FRF Plot Ratio 0.200">
+        <div class="caption">Figure 7: FRF Response for Slenderness Ratio 0.200 ($w/L = 1/5$)</div>
+    </div>
+
+    <h2>4. Conclusion</h2>
+    <p>The sweep confirms that structural stability (buckling load) scales with approximately the fourth power of the slenderness ratio for circular sections. Additionally, higher slenderness ratios result in a marked reduction in total strain energy response and a shift of modal frequencies toward the ultrasonic range, indicating significantly improved dynamic stiffness.</p>
+
+</body>
+</html>
